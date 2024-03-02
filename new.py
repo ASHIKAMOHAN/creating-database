@@ -70,3 +70,4 @@ doctors_df.to_sql('Doctors', conn, if_exists='append', index=False)
 # Commit changes and close connection
 conn.commit()
 conn.close()
+
