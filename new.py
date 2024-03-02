@@ -1,73 +1,84 @@
 import numpy as np
 import pandas as pd
 from faker import Faker
-import random
-import datetime
 import sqlite3
 
-# Initialize Faker object
+# Initialize Faker to generate random names
 fake = Faker()
 
-# Generate Patients
+# Define number of patients and medical conditions
 n_patients = 1000
-patients_data = []
-for _ in range(n_patients):
-    patient_id = fake.unique.random_number(digits=6)
-    name = fake.name()
-    age = random.randint(1, 100)
-    gender = random.choice(['Male', 'Female', 'Other'])
-    patients_data.append((patient_id, name, age, gender))
+n_conditions = 10
 
-patients_df = pd.DataFrame(patients_data, columns=['Patient_ID', 'Name', 'Age', 'Gender'])
+# Generate patient data
+patients_data = {
+    'PatientID': np.arange(1, n_patients + 1),
+    'Name': [fake.name() for _ in range(n_patients)],
+    'Age': np.random.randint(1, 100, size=n_patients),  # Ratio data
+    'Gender': np.random.choice(['Male', 'Female'], size=n_patients),  # Nominal data
+    'BloodType': np.random.choice(['A', 'B', 'AB', 'O'], size=n_patients),  # Nominal data
+    'Height_cm': np.random.normal(170, 10, n_patients),  # Interval data
+    'Weight_kg': np.random.normal(70, 15, n_patients)  # Ratio data
+}
 
-# Generate Appointments
-n_appointments = 2000
-appointments_data = []
-for _ in range(n_appointments):
-    appointment_id = fake.unique.random_number(digits=6)
-    patient_id = random.choice(patients_df['Patient_ID'])
-    appointment_type = random.choice(['General', 'Specialist', 'Emergency'])
-    appointment_date = fake.date_time_between(start_date='-1y', end_date='+1y').strftime('%Y-%m-%d %H:%M:%S')
-    appointments_data.append((appointment_id, patient_id, appointment_type, appointment_date))
+patients_df = pd.DataFrame(patients_data)
 
-appointments_df = pd.DataFrame(appointments_data, columns=['Appointment_ID', 'Patient_ID', 'Appointment_Type', 'Appointment_Date'])
+# Define meaningful medical conditions
+medical_conditions = [
+    "Diabetes",
+    "Hypertension",
+    "Obesity",
+    "Asthma",
+    "Arthritis",
+    "Cancer",
+    "Heart Disease",
+    "Depression",
+    "Migraine",
+    "Allergy"
+]
 
-# Generate Doctors
-n_doctors = 50
-doctors_data = []
-for _ in range(n_doctors):
-    doctor_id = fake.unique.random_number(digits=6)
-    name = fake.name()
-    specialty = fake.random_element(elements=('Cardiology', 'Orthopedics', 'Pediatrics', 'Neurology'))
-    doctors_data.append((doctor_id, name, specialty))
+# Generate medical conditions data
+conditions_df = pd.DataFrame({
+    'ConditionID': np.arange(1, n_conditions + 1),
+    'Condition': np.random.choice(medical_conditions, size=n_conditions)  # Meaningful medical conditions
+})
 
-doctors_df = pd.DataFrame(doctors_data, columns=['Doctor_ID', 'Name', 'Specialty'])
+# Generate patient conditions data (many-to-many relationship)
+patient_condition_data = {
+    'PatientID': np.random.choice(patients_df['PatientID'], size=n_patients),
+    'ConditionID': np.random.choice(conditions_df['ConditionID'], size=n_patients)
+}
+
+patient_conditions_df = pd.DataFrame(patient_condition_data)
+
+# Generate appointment data
+n_appointments = 2000  # Assuming multiple appointments per patient
+appointment_data = {
+    'AppointmentID': np.arange(1, n_appointments + 1),
+    'PatientID': np.random.choice(patients_df['PatientID'], size=n_appointments),
+    'Date': [fake.date_this_year() for _ in range(n_appointments)],  # Interval data
+    'Time': [fake.time() for _ in range(n_appointments)]  # Interval data
+}
+
+appointments_df = pd.DataFrame(appointment_data)
 
 # Save data to CSV files
 patients_df.to_csv('patients.csv', index=False)
+conditions_df.to_csv('medical_conditions.csv', index=False)
+patient_conditions_df.to_csv('patient_conditions.csv', index=False)
 appointments_df.to_csv('appointments.csv', index=False)
-doctors_df.to_csv('doctors.csv', index=False)
 
-# Connect to SQLite database
-conn = sqlite3.connect('hospital_database.db')
-cursor = conn.cursor()
+# Connect to SQLite database (or create if it doesn't exist)
+conn = sqlite3.connect('patients_database.db')
 
-# Define CSV file paths
-patients_csv = 'patients.csv'
-appointments_csv = 'appointments.csv'
-doctors_csv = 'doctors.csv'
-
-# Read CSV files into Pandas DataFrames
-patients_df = pd.read_csv(patients_csv)
-appointments_df = pd.read_csv(appointments_csv)
-doctors_df = pd.read_csv(doctors_csv)
-
-# Save data into SQLite tables
-patients_df.to_sql('Patients', conn, if_exists='append', index=False)
-appointments_df.to_sql('Appointments', conn, if_exists='append', index=False)
-doctors_df.to_sql('Doctors', conn, if_exists='append', index=False)
+# Write DataFrames to SQLite database tables
+patients_df.to_sql('patients', conn, index=False, if_exists='replace')
+conditions_df.to_sql('medical_conditions', conn, index=False, if_exists='replace')
+patient_conditions_df.to_sql('patient_conditions', conn, index=False, if_exists='replace')
+appointments_df.to_sql('appointments', conn, index=False, if_exists='replace')
 
 # Commit changes and close connection
 conn.commit()
 conn.close()
 
+print("Database created successfully!")
