@@ -101,3 +101,31 @@ appointments_df.to_sql('appointments', conn, index=False, if_exists='replace')
 # Commit changes and close connection
 conn.commit()
 conn.close()
+
+# Function to read data from SQLite database into a DataFrame
+def read_table_to_dataframe(database_file, table_name):
+    """
+    Reads data from a table in an SQLite database and returns a Pandas DataFrame.
+
+    Parameters:
+    - database_file (str): Path to the SQLite database file.
+    - table_name (str): Name of the table to read from.
+
+    Returns:
+    - pandas.DataFrame: DataFrame containing the data from the specified table.
+    """
+    # Connect to the SQLite database
+    conn = sqlite3.connect(database_file)
+
+    # Read data from the specified table into a DataFrame
+    query = f"SELECT * FROM {table_name};"
+    df = pd.read_sql_query(query, conn)
+
+    # Close the database connection
+    conn.close()
+
+    return df
+
+# Example usage of the function to read patients data
+patients_from_db = read_table_to_dataframe('patients_database.db', 'patients')
+print(patients_from_db.head())
