@@ -3,14 +3,14 @@ import pandas as pd
 from faker import Faker
 import sqlite3
 
-# Initialize Faker to generate random names
+# Initializing Faker to generate random names
 fake = Faker()
 
-# Define number of patients and medical conditions
+#number of patients and medical conditions
 n_patients = 1000
 n_conditions = 10
-
-# Generate patient data
+ 
+# Generating patient data
 patients_data = {
     'PatientID': np.arange(1, n_patients + 1),
     'Name': [fake.name() for _ in range(n_patients)],
@@ -30,7 +30,7 @@ patients_df = pd.DataFrame(patients_data)
 # Concatenate 5% of the DataFrame to itself
 patients_df = pd.concat([patients_df, patients_df.sample(frac=0.05)])
 
-# Define  medical conditions
+# Defining medical conditions
 medical_conditions = [
     "Diabetes",
     "Hypertension",
@@ -54,7 +54,7 @@ conditions_df = pd.DataFrame({
 # Concatenate 5% of the DataFrame to itself
 conditions_df = pd.concat([conditions_df, conditions_df.sample(frac=0.05)])
 
-# Generate patient conditions data (many-to-many relationship)
+# Generating patient conditions data 
 patient_condition_data = {
     'PatientID': np.random.choice(patients_df['PatientID'], size=n_patients),
     'ConditionID': np.random.choice(conditions_df['ConditionID'], size=n_patients)
@@ -87,10 +87,10 @@ conditions_df.to_csv('medical_conditions.csv', index=False)
 patient_conditions_df.to_csv('patient_conditions.csv', index=False)
 appointments_df.to_csv('appointments.csv', index=False)
 
-# Connect to SQLite database (or create if it doesn't exist)
+# Connect to SQLite database 
 conn = sqlite3.connect('patients_database.db')
 
-# Write DataFrames to SQLite database tables
+# DataFrames to SQLite database tables
 patients_df.to_sql('patients', conn, index=False, if_exists='replace')
 conditions_df.to_sql('medical_conditions', conn,
                      index=False, if_exists='replace')
@@ -114,14 +114,56 @@ def read_table_to_dataframe(database_file, table_name):
     Returns:
     - pandas.DataFrame: DataFrame containing the data from the specified table.
     """
-    # Connect to the SQLite database
-    conn = sqlite3.connect(database_file)
+    
+    # Connect to SQLite database (or create if it doesn't exist)
+    conn = sqlite3.connect('patients_database.db')
+    c = conn.cursor()
 
-    # Read data from the specified table into a DataFrame
+    # Patients Table
+    c.execute('''CREATE TABLE IF NOT EXISTS patients (
+                    PatientID INTEGER PRIMARY KEY,
+                    Name TEXT NOT NULL,
+                    Age INTEGER CHECK(Age >= 0),
+                    Gender TEXT CHECK(Gender IN ('Male', 'Female', 'Other')),
+                    BloodType TEXT CHECK(BloodType IN ('A', 'B', 'AB', 'O', NULL)),
+                    Height_cm REAL CHECK(Height_cm >= 0),
+                    Weight_kg REAL CHECK(Weight_kg >= 0),
+                    PatientKey TEXT UNIQUE
+                );''')
+
+    # Medical Conditions Table
+    c.execute('''CREATE TABLE IF NOT EXISTS medical_conditions (
+                    ConditionID INTEGER PRIMARY KEY,
+                    Condition TEXT NOT NULL UNIQUE
+                );''')
+
+    # Patient Conditions Table
+    c.execute('''CREATE TABLE IF NOT EXISTS patient_conditions (
+                    PatientID INTEGER,
+                    ConditionID INTEGER,
+                    PRIMARY KEY (PatientID, ConditionID),
+                    FOREIGN KEY (PatientID) REFERENCES patients(PatientID),
+                    FOREIGN KEY (ConditionID) REFERENCES medical_conditions(ConditionID)
+                );''')
+
+    # Appointments Table
+    c.execute('''CREATE TABLE IF NOT EXISTS appointments (
+                    AppointmentID INTEGER PRIMARY KEY,
+                    PatientID INTEGER,
+                    Date TEXT,
+                    Time TEXT,
+                    FOREIGN KEY (PatientID) REFERENCES patients(PatientID)
+                );''')
+
+    # Commit changes and close connection
+    conn.commit()
+
+
+        # Read data from the specified table into a DataFrame
     query = f"SELECT * FROM {table_name};"
     df = pd.read_sql_query(query, conn)
 
-    # Close the database connection
+        # Close the database connection
     conn.close()
 
     return df
