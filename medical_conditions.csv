@@ -1,11 +1,11 @@
 ConditionID,Condition
-1,Hypertension
+1,Allergy
 2,Arthritis
-3,Heart Disease
-4,Allergy
-5,Heart Disease
-6,Diabetes
-7,Allergy
-8,Diabetes
-9,Hypertension
-10,Arthritis
+3,Migraine
+4,Cancer
+5,Migraine
+6,Migraine
+7,Diabetes
+8,Migraine
+9,Asthma
+10,Diabetes
