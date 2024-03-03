@@ -6,10 +6,10 @@ import sqlite3
 # Initializing Faker to generate random names
 fake = Faker()
 
-#number of patients and medical conditions
+# Number of patients and medical conditions
 n_patients = 1000
 n_conditions = 10
- 
+
 # Generating patient data
 patients_data = {
     'PatientID': np.arange(1, n_patients + 1),
@@ -21,14 +21,17 @@ patients_data = {
     'BloodType': np.random.choice(['A', 'B', 'AB', 'O', None], size=n_patients),
     'Height_cm': np.random.normal(170, 10, n_patients),  # Interval data
     'Weight_kg': np.random.normal(70, 15, n_patients),  # Ratio data
+    'Postcode': [fake.postcode() for _ in range(n_patients)],
     # Generating unique identifiers
     'PatientKey': [fake.uuid4() for _ in range(n_patients)]
-}
 
-# Duplicate some rows to create duplicates
+}
 patients_df = pd.DataFrame(patients_data)
-# Concatenate 5% of the DataFrame to itself
-patients_df = pd.concat([patients_df, patients_df.sample(frac=0.05)])
+
+# Create duplicate values in specified columns
+duplicate_columns = ['Name', 'Gender', 'BloodType']
+for col in duplicate_columns:
+    patients_df[col] = patients_df[col].sample(frac=1).reset_index(drop=True)
 
 # Defining medical conditions
 medical_conditions = [
@@ -50,20 +53,13 @@ conditions_df = pd.DataFrame({
     'Condition': np.random.choice(medical_conditions, size=n_conditions)
 })
 
-# Duplicate some rows to create duplicates
-# Concatenate 5% of the DataFrame to itself
-conditions_df = pd.concat([conditions_df, conditions_df.sample(frac=0.05)])
-
-# Generating patient conditions data 
+# Generating patient conditions data
 patient_condition_data = {
     'PatientID': np.random.choice(patients_df['PatientID'], size=n_patients),
     'ConditionID': np.random.choice(conditions_df['ConditionID'], size=n_patients)
 }
-
-# Duplicate some rows to create duplicates
 patient_conditions_df = pd.DataFrame(patient_condition_data)
-patient_conditions_df = pd.concat([patient_conditions_df, patient_conditions_df.sample(
-    frac=0.05)])  # Concatenate 5% of the DataFrame to itself
+
 
 # Generate appointment data
 n_appointments = 2000  # Assuming multiple appointments per patient
@@ -77,9 +73,6 @@ appointment_data = {
 
 # Duplicate some rows to create duplicates
 appointments_df = pd.DataFrame(appointment_data)
-# Concatenate 5% of the DataFrame to itself
-appointments_df = pd.concat(
-    [appointments_df, appointments_df.sample(frac=0.05)])
 
 # Save data to CSV files
 patients_df.to_csv('patients.csv', index=False)
@@ -87,7 +80,7 @@ conditions_df.to_csv('medical_conditions.csv', index=False)
 patient_conditions_df.to_csv('patient_conditions.csv', index=False)
 appointments_df.to_csv('appointments.csv', index=False)
 
-# Connect to SQLite database 
+# Connect to SQLite database
 conn = sqlite3.connect('patients_database.db')
 
 # DataFrames to SQLite database tables
@@ -102,72 +95,5 @@ appointments_df.to_sql('appointments', conn, index=False, if_exists='replace')
 conn.commit()
 conn.close()
 
-# Function to read data from SQLite database into a DataFrame
-def read_table_to_dataframe(database_file, table_name):
-    """
-    Reads data from a table in an SQLite database and returns a Pandas DataFrame.
-
-    Parameters:
-    - database_file (str): Path to the SQLite database file.
-    - table_name (str): Name of the table to read from.
-
-    Returns:
-    - pandas.DataFrame: DataFrame containing the data from the specified table.
-    """
-    
-    # Connect to SQLite database (or create if it doesn't exist)
-    conn = sqlite3.connect('patients_database.db')
-    c = conn.cursor()
-
-    # Patients Table
-    c.execute('''CREATE TABLE IF NOT EXISTS patients (
-                    PatientID INTEGER PRIMARY KEY,
-                    Name TEXT NOT NULL,
-                    Age INTEGER CHECK(Age >= 0),
-                    Gender TEXT CHECK(Gender IN ('Male', 'Female', 'Other')),
-                    BloodType TEXT CHECK(BloodType IN ('A', 'B', 'AB', 'O', NULL)),
-                    Height_cm REAL CHECK(Height_cm >= 0),
-                    Weight_kg REAL CHECK(Weight_kg >= 0),
-                    PatientKey TEXT UNIQUE
-                );''')
-
-    # Medical Conditions Table
-    c.execute('''CREATE TABLE IF NOT EXISTS medical_conditions (
-                    ConditionID INTEGER PRIMARY KEY,
-                    Condition TEXT NOT NULL UNIQUE
-                );''')
-
-    # Patient Conditions Table
-    c.execute('''CREATE TABLE IF NOT EXISTS patient_conditions (
-                    PatientID INTEGER,
-                    ConditionID INTEGER,
-                    PRIMARY KEY (PatientID, ConditionID),
-                    FOREIGN KEY (PatientID) REFERENCES patients(PatientID),
-                    FOREIGN KEY (ConditionID) REFERENCES medical_conditions(ConditionID)
-                );''')
-
-    # Appointments Table
-    c.execute('''CREATE TABLE IF NOT EXISTS appointments (
-                    AppointmentID INTEGER PRIMARY KEY,
-                    PatientID INTEGER,
-                    Date TEXT,
-                    Time TEXT,
-                    FOREIGN KEY (PatientID) REFERENCES patients(PatientID)
-                );''')
-
-    # Commit changes and close connection
-    conn.commit()
 
 
-        # Read data from the specified table into a DataFrame
-    query = f"SELECT * FROM {table_name};"
-    df = pd.read_sql_query(query, conn)
-
-        # Close the database connection
-    conn.close()
-
-    return df
-
-# Example usage of the function to read patients data
-patients_from_db = read_table_to_dataframe('patients_database.db', 'patients')
-print(patients_from_db.head())
