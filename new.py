@@ -12,22 +12,24 @@ n_conditions = 10
 
 # Generate patient data
 patients_data = {
-    'PatientID': np.arange(1, n_patients + 1),
-    'Name': [fake.name() for _ in range(n_patients)],
-    'Age': np.random.randint(1, 100, size=n_patients),
-    'Gender': np.random.choice(['Male', 'Female', 'Other'], size=n_patients),
-    'BloodType': np.random.choice(['A', 'B', 'AB', 'O', None], size=n_patients),
-    'Height_cm': np.random.normal(170, 10, n_patients),
-    'Weight_kg': np.random.normal(70, 15, n_patients),
-    'Postcode': [fake.postcode() for _ in range(n_patients)],
-    'PatientKey': [fake.uuid4() for _ in range(n_patients)]
+    'PatientID': np.arange(1, n_patients + 1),  # Ratio data (unique identifier for patients)
+    'Name': [fake.name() for _ in range(n_patients)],  # Nominal data (patient names)
+    'Age': np.random.randint(1, 100, size=n_patients),  # Ratio data (age in years)
+    'Gender': np.random.choice(['Male', 'Female', 'Other'], size=n_patients),  # Nominal data (gender)
+    'BloodType': np.random.choice(['A', 'B', 'AB', 'O', None], size=n_patients),  # Nominal data (blood type)
+    'Height_cm': np.random.normal(170, 10, n_patients),  # Interval data (height in centimeters)
+    'Weight_kg': np.random.normal(70, 15, n_patients),  # Interval data (weight in kilograms)
+    'Postcode': [fake.postcode() for _ in range(n_patients)],  # Nominal data (postcode)
+    'PatientKey': [fake.uuid4() for _ in range(n_patients)]  # Nominal data (unique identifier for patients)
 }
+
+# Create a DataFrame from the patient data
 patients_df = pd.DataFrame(patients_data)
 
 # Create duplicate values in specified columns
 duplicate_columns = ['Name', 'Gender', 'BloodType']
 for col in duplicate_columns:
-    patients_df[col] = patients_df[col].sample(frac=1).reset_index(drop=True)
+    patients_df[col] = patients_df[col].sample(frac=1).reset_index(drop=True)  
 
 # Create an ordinal column for health status
 health_status_categories = ['Poor', 'Fair', 'Good', 'Very Good', 'Excellent']
