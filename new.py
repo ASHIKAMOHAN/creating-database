@@ -29,6 +29,10 @@ duplicate_columns = ['Name', 'Gender', 'BloodType']
 for col in duplicate_columns:
     patients_df[col] = patients_df[col].sample(frac=1).reset_index(drop=True)
 
+# Create an ordinal column for health status
+health_status_categories = ['Poor', 'Fair', 'Good', 'Very Good', 'Excellent']
+patients_df['Health_Status'] = np.random.choice(health_status_categories, size=n_patients)
+
 # Define medical conditions
 medical_conditions = [
     "Diabetes", "Hypertension", "Obesity", "Asthma", "Arthritis",
@@ -72,6 +76,48 @@ patients_df.to_sql('patients', conn, index=False, if_exists='replace')
 conditions_df.to_sql('medical_conditions', conn, index=False, if_exists='replace')
 patient_conditions_df.to_sql('patient_conditions', conn, index=False, if_exists='replace')
 appointments_df.to_sql('appointments', conn, index=False, if_exists='replace')
+
+# Adding constraints to the tables
+conn.execute('''
+    CREATE TABLE IF NOT EXISTS patients (
+        PatientID INTEGER PRIMARY KEY,
+        Name TEXT NOT NULL,
+        Age INTEGER CHECK(Age > 0 AND Age < 150),
+        Gender TEXT CHECK(Gender IN ('Male', 'Female', 'Other')),
+        BloodType TEXT CHECK(BloodType IN ('A', 'B', 'AB', 'O', NULL)),
+        Height_cm REAL CHECK(Height_cm > 0),
+        Weight_kg REAL CHECK(Weight_kg > 0),
+        Postcode TEXT,
+        PatientKey TEXT UNIQUE
+    );
+''')
+
+conn.execute('''
+    CREATE TABLE IF NOT EXISTS medical_conditions (
+        ConditionID INTEGER PRIMARY KEY,
+        Condition TEXT NOT NULL UNIQUE
+    );
+''')
+
+conn.execute('''
+    CREATE TABLE IF NOT EXISTS patient_conditions (
+        PatientID INTEGER,
+        ConditionID INTEGER,
+        PRIMARY KEY (PatientID, ConditionID),
+        FOREIGN KEY (PatientID) REFERENCES patients(PatientID),
+        FOREIGN KEY (ConditionID) REFERENCES medical_conditions(ConditionID)
+    );
+''')
+
+conn.execute('''
+    CREATE TABLE IF NOT EXISTS appointments (
+        AppointmentID INTEGER PRIMARY KEY,
+        PatientID INTEGER,
+        Date TEXT,
+        Time TEXT,
+        FOREIGN KEY (PatientID) REFERENCES patients(PatientID)
+    );
+''')
 
 # Commit changes and close connection
 conn.commit()
